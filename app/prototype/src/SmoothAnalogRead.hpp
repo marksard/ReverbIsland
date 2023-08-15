@@ -35,14 +35,22 @@ public:
     uint16_t analogRead(bool smooth = true)
     {
         // アナログ入力。平均＋ローパスフィルタ仕様
-        // フィルタは係数0.05096が半端なのは誤差で目減りしたぶんの帳尻合わせるため
         int aval = 0;
-        for (byte j = 0; j < 16; ++j)
+        for (byte i = 0; i < 16; ++i)
         {
-            aval += readPin() + 1;
+            aval += readPin();
         }
-        aval = aval >> 4;
-        _value = (_value * 0.95) + (aval * 0.05096);
+        // 実測による調整
+        // 10bit
+        // aval = (aval >> 4) - 3;
+        // _value = (_value * 0.8) + (aval * 0.2014);
+        // 12bit
+        aval = (aval >> 4) - 16;
+        _value = (_value * 0.95) + (aval * 0.05044);
+
+        // Serial.print(aval);
+        // Serial.print(",");
+        // Serial.println(_value);
         return smooth ? _value : aval;
     }
 
