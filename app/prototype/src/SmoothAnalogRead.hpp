@@ -24,6 +24,7 @@ public:
     {
         _pin = pin;
         _value = 0;
+        _valueOld = 65535;
         pinMode(pin, INPUT_PULLUP);
     }
 
@@ -34,6 +35,7 @@ public:
 
     uint16_t analogRead(bool smooth = true)
     {
+        _valueOld = _value;
         // アナログ入力。平均＋ローパスフィルタ仕様
         int aval = 0;
         for (byte i = 0; i < 16; ++i)
@@ -47,16 +49,27 @@ public:
         // 12bit
         aval = (aval >> 4) - 16;
         _value = (_value * 0.95) + (aval * 0.05044);
-
         // Serial.print(aval);
         // Serial.print(",");
         // Serial.println(_value);
-        return smooth ? _value : aval;
+        _value = smooth ? _value : aval;
+        return _value;
+    }
+
+    uint16_t getValue()
+    {
+        return _value;
+    }
+
+    bool hasChanged()
+    {
+        return _valueOld != _value;
     }
 
 protected:
     byte _pin;
     uint16_t _value;
+    uint16_t _valueOld;
 
     /// @brief ピン値読込
     /// @return
