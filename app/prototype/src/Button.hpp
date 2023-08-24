@@ -56,9 +56,21 @@ public:
             }
             else if (_pinState == 0x00)
             {
+                _holdStage = 3;
                 result = 3;
             }
 
+            return result;
+        }
+        else if (_holdStage == 3)
+        {
+            // Holded
+            if (_pinState == 0x0F)
+            {
+                _holdStage = 0;
+                result = 4;
+            }
+            // nothing
             return result;
         }
 
