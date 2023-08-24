@@ -44,10 +44,10 @@ public:
         }
         // 実測による調整
         // 10bit
-        // aval = (aval >> 4) - 3;
+        // aval = max(((aval >> 4) - 3), 0);
         // _value = (_value * 0.8) + (aval * 0.2014);
         // 12bit
-        aval = (aval >> 4) - 16;
+        aval = max(((aval >> 4) - 16), 0);
         _value = (_value * 0.95) + (aval * 0.05044);
         // Serial.print(aval);
         // Serial.print(",");
