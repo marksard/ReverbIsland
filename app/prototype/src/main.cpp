@@ -2,10 +2,13 @@
 #include <U8g2lib.h>
 #include "Button.hpp"
 #include "SmoothAnalogRead.hpp"
+#include "EzOscilloscope.hpp"
+
+// #define PROTO
 
 // GIPO割り当て
-#define SW1 15
-#define SW2 14
+#define SW0 15
+#define SW1 14
 #define POT0 A0
 #define POT1 A1
 #define POT2 A2
@@ -18,10 +21,11 @@
 #define T0 13
 #define ROM1 6
 #define ROM2 7
+#define CV A3
 
 // 操作関係
+static Button sw0;
 static Button sw1;
-static Button sw2;
 #define POTS_MAX 3
 #define POTS_BIT 12
 #define POTS_MAX_VALUE 4095
@@ -30,13 +34,16 @@ static uint potSlices[POTS_MAX] = {0};
 static uint potChs[POTS_MAX] = {PWM_CHAN_A, PWM_CHAN_B, PWM_CHAN_A};
 static uint pwmPotGpios[POTS_MAX] = {PWM_POT0, PWM_POT1, PWM_POT2};
 
+static SmoothAnalogRead cv;
+static EzOscilloscope ezOscillo;
+
 // 表示関係
 static U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/U8X8_PIN_NONE);
 static int8_t presetIndex = 0;
 static uint16_t potValues[POTS_MAX] = {0};
 
 #define PRESET_SELECT_MAX 8
-#define PRESET_MAP_MAX 3    // INTERNAL PRESETS + (EEPROM x 2)
+#define PRESET_MAP_MAX 3 // INTERNAL PRESETS + (EEPROM x 2)
 // presetIndexの最大値はPRESET_SELECT_MAX * PRESET_MAP_MAXとなる
 #define PRESET_TOTAL (PRESET_SELECT_MAX * PRESET_MAP_MAX)
 
@@ -82,34 +89,48 @@ const static char *effectNames[PRESET_TOTAL][4] = {
 
 void initOLED()
 {
-    u8g2.setFont(u8g2_font_7x14B_tf);
+    u8g2.begin();
     u8g2.setContrast(40);
     u8g2.setFontPosTop();
     u8g2.setDrawColor(2);
-    u8g2.begin();
+#ifndef PROTO
+    u8g2.setFlipMode(1);
+#endif
 }
+
+#ifdef PROTO
+#define TITLE_ROW 3
+#define POTS_ROW 0
+#else
+#define TITLE_ROW 0
+#define POTS_ROW 1
+#endif
 
 void dispOLED(byte index, uint16_t values[POTS_MAX])
 {
+    u8g2.setFont(u8g2_font_7x14B_tf);
     u8g2.clearBuffer();
     static char disp_buf[24] = {0};
 
     for (byte i = 0; i < POTS_MAX; ++i)
     {
+        byte height = 16 * (i + POTS_ROW);
+
         // プリセット項目名と数値を表示
         byte value = map(values[i], 0, POTS_MAX_VALUE, 0, 127); // 表示する棒グラフの幅範囲も兼ねてる
-        sprintf(disp_buf, "P%d: %s %03d", i, (const char *)effectNames[index][i+1], value);
-        u8g2.drawStr(0, 16 * i, disp_buf);
+        sprintf(disp_buf, "P%d: %s %03d", i, (const char *)effectNames[index][i + 1], value);
+        u8g2.drawStr(0, height, disp_buf);
         // ラベル背景に棒グラフ的に表示
-        u8g2.drawBox(0, 16 * i, value, 14);
+        u8g2.drawBox(0, height, value, 14);
     }
 
     // ROM/EEPROPM1/2の表示、プリセット名表示
     static char rom[2] = {0};
     byte mapIndex = index / PRESET_SELECT_MAX;
-    sprintf(rom, mapIndex == 0 ? "R" : mapIndex == 1 ? "A" : "B");
+    sprintf(rom, mapIndex == 0 ? "R" : mapIndex == 1 ? "A"
+                                                     : "B");
     sprintf(disp_buf, "%s%d: %s", rom, index % 8, (const char *)effectNames[index][0]);
-    u8g2.drawStr(0, 16 * 3, disp_buf);
+    u8g2.drawStr(0, 16 * TITLE_ROW, disp_buf);
 
     u8g2.sendBuffer();
 }
@@ -216,13 +237,21 @@ su constrainCyclic(su value, su min, su max)
 
 void initController()
 {
+    // internal regulator output mode -> PWM
+    pinMode(23, OUTPUT);
+    digitalWrite(23, HIGH);
+
     // ADC解像度とパルス出力解像度はあわせること
     analogReadResolution(POTS_BIT);
+    sw0.init(SW0);
     sw1.init(SW1);
-    sw2.init(SW2);
+    sw0.setHoldTime(1000);
+    sw1.setHoldTime(1000);
     pots[0].init(POT0);
     pots[1].init(POT1);
     pots[2].init(POT2);
+    cv.init(CV);
+    ezOscillo.init(&u8g2, &cv, POTS_ROW * 16);
 
     initRomBit();
     setRomBit(presetIndex);
@@ -233,6 +262,7 @@ void initController()
     initPWMPotsOut();
 }
 
+static byte dispMode = 0;
 void updateController()
 {
     // ポット処理更新
@@ -242,19 +272,39 @@ void updateController()
         // FV-1へポットの値をパルス出力
         pwm_set_chan_level(potSlices[i], potChs[i], potValues[i]);
     }
-
+    
+    byte stateSw0 = sw0.getState();
+    byte stateSw1 = sw1.getState();
     // ボタン処理：プリセット変更
-    if (sw1.getState() == 2)
+    if (stateSw0 == 2)
     {
-        presetIndex = constrainCyclic(presetIndex + 1, 0, PRESET_TOTAL - 1);
-        setRomBit(presetIndex);
-        setPresetBit(presetIndex);
+        if (dispMode)
+        {
+            ezOscillo.incDelay();
+        }
+        else
+        {
+            presetIndex = constrainCyclic(presetIndex + 1, 0, PRESET_TOTAL - 1);
+            setRomBit(presetIndex);
+            setPresetBit(presetIndex);
+        }
     }
-    if (sw2.getState() == 2)
+    else if (stateSw0 == 3)
     {
-        presetIndex = constrainCyclic(presetIndex - 1, 0, PRESET_TOTAL - 1);
-        setRomBit(presetIndex);
-        setPresetBit(presetIndex);
+        dispMode = dispMode ? 0 : 1;
+    }
+    if (stateSw1 == 2)
+    {
+        if (dispMode)
+        {
+            ezOscillo.decDelay();
+        }
+        else
+        {
+            presetIndex = constrainCyclic(presetIndex - 1, 0, PRESET_TOTAL - 1);
+            setRomBit(presetIndex);
+            setPresetBit(presetIndex);
+        }
     }
 }
 
@@ -282,5 +332,12 @@ void loop1()
 {
     // 30fpsで更新
     delay(33);
-    dispOLED(presetIndex, potValues);
+    if (dispMode)
+    {
+        ezOscillo.play();
+    }
+    else
+    {
+        dispOLED(presetIndex, potValues);
+    }
 }
