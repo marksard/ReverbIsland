@@ -3,32 +3,13 @@
 #include "Button.hpp"
 #include "SmoothAnalogRead.hpp"
 #include "EzOscilloscope.hpp"
-
-// #define PROTO
-
-// GIPO割り当て
-#define SW0 15
-#define SW1 14
-#define POT0 A0
-#define POT1 A1
-#define POT2 A2
-#define PWM_POT0 10
-#define PWM_POT1 11
-#define PWM_POT2 12
-#define S0 1
-#define S1 2
-#define S2 3
-#define T0 13
-#define ROM1 6
-#define ROM2 7
-#define CV A3
+#include "Presets.hpp"
+#include "Settings.hpp"
+#include "GpioSet.h"
 
 // 操作関係
 static Button sw0;
 static Button sw1;
-#define POTS_MAX 3
-#define POTS_BIT 12
-#define POTS_MAX_VALUE 4095
 static SmoothAnalogRead pots[POTS_MAX];
 static uint potSlices[POTS_MAX] = {0};
 static uint potChs[POTS_MAX] = {PWM_CHAN_A, PWM_CHAN_B, PWM_CHAN_A};
@@ -41,51 +22,7 @@ static EzOscilloscope ezOscillo;
 static U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/U8X8_PIN_NONE);
 static int8_t presetIndex = 0;
 static uint16_t potValues[POTS_MAX] = {0};
-
-#define PRESET_SELECT_MAX 8
-#define PRESET_MAP_MAX 3 // INTERNAL PRESETS + (EEPROM x 2)
-// presetIndexの最大値はPRESET_SELECT_MAX * PRESET_MAP_MAXとなる
-#define PRESET_TOTAL (PRESET_SELECT_MAX * PRESET_MAP_MAX)
-
-// プリセット名やパラメタ名などは、EEPROMには入ってないしEEPROMを直接読まないのでここで都度定義する必要がある
-const static char *effectNames[PRESET_TOTAL][4] = {
-    // INTERNAL PRESETS
-    {"ChorusReverb", "Rev Mix ", "ChorRate", "Chor Mix"},
-    {"FlangeReverb", "Rev Mix ", "FlngRate", "Flag Mix"},
-    {"Tremolo-rev ", "Rev Mix ", "TremRate", "Trem Mix"},
-    {"Pitch shift ", "PtchSemi", "--------", "--------"},
-    {"Pitch-echo  ", "PtchShft", "EchoDlay", "EchoMix "},
-    {"Test        ", "--------", "--------", "--------"},
-    {"Reverb 1    ", "Rev Time", "HF  Filt", "LF  Filt"},
-    {"Reverb 2    ", "Rev Time", "HF  Filt", "LF  Filt"},
-    // EEPROM A（例）
-    {"Echo Reverb ", "Delay   ", "Repeat  ", "Reverb  "}, // Spin Semi  3K_V1_4_ECHO-REV.spn
-    {"Rv+Flnge+LP ", "Reverb  ", "Flanger ", "LPF     "}, // Dave Spinkler  dance_ir_fla_l.spn
-    {"Rv+Pitch+LP ", "Reverb  ", "Pitch   ", "Filter  "}, // Dave Spinkler  dance_ir_ptz_l.spn
-    {"ShimmerRvOct", "Shimmer ", "Time    ", "Damping "}, // Dattorro Mix Reverb  dattorro-shimmer_oct_var-lvl.spn
-    {"ShimmerValLv", "Shimmer ", "Time    ", "Damping "}, // Dattorro Mix Reverb  dattorro-shimmer_val-lvl.spn
-    {"SnglTapeEcRv", "Time    ", "Feedback", "Damping "}, // ---  dv103-1head-pp-2_1-4xreverb.spn
-    {"DualTapeEcRv", "DlayTime", "Feedback", "Damping "}, // ---  dv103-2head-2_1-reverb.spn
-    {"RoomReverb  ", "DlayTime", "Damping ", "Feedback"}, // Digital Larry  room-reverb-3-4-5.spn
-    // // EEPROM A
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // {"EEPROM A    ", "P1      ", "P2      ", "P3      "}, //
-    // EEPROM B
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-    {"EEPROM B    ", "P1      ", "P2      ", "P3      "}, //
-};
+static uint16_t potSettingValues[POTS_MAX] = {0};
 
 void initOLED()
 {
@@ -96,43 +33,8 @@ void initOLED()
 #ifndef PROTO
     u8g2.setFlipMode(1);
 #endif
-}
-
-#ifdef PROTO
-#define TITLE_ROW 3
-#define POTS_ROW 0
-#else
-#define TITLE_ROW 0
-#define POTS_ROW 1
-#endif
-
-void dispOLED(byte index, uint16_t values[POTS_MAX])
-{
-    u8g2.setFont(u8g2_font_7x14B_tf);
-    u8g2.clearBuffer();
-    static char disp_buf[24] = {0};
-
-    for (byte i = 0; i < POTS_MAX; ++i)
-    {
-        byte height = 16 * (i + POTS_ROW);
-
-        // プリセット項目名と数値を表示
-        byte value = map(values[i], 0, POTS_MAX_VALUE, 0, 127); // 表示する棒グラフの幅範囲も兼ねてる
-        sprintf(disp_buf, "P%d: %s %03d", i, (const char *)effectNames[index][i + 1], value);
-        u8g2.drawStr(0, height, disp_buf);
-        // ラベル背景に棒グラフ的に表示
-        u8g2.drawBox(0, height, value, 14);
-    }
-
-    // ROM/EEPROPM1/2の表示、プリセット名表示
-    static char rom[2] = {0};
-    byte mapIndex = index / PRESET_SELECT_MAX;
-    sprintf(rom, mapIndex == 0 ? "R" : mapIndex == 1 ? "A"
-                                                     : "B");
-    sprintf(disp_buf, "%s%d: %s", rom, index % 8, (const char *)effectNames[index][0]);
-    u8g2.drawStr(0, 16 * TITLE_ROW, disp_buf);
-
-    u8g2.sendBuffer();
+    initPresets(&u8g2);
+    initSettings(&u8g2);
 }
 
 void initRomBit()
@@ -262,50 +164,164 @@ void initController()
     initPWMPotsOut();
 }
 
-static byte dispMode = 0;
-void updateController()
+extern byte assignCVMode;
+extern byte assignCV2Pot;
+extern byte assignCVDepth;
+
+static byte unlock[3] = {0};
+void resetUnlock()
+{
+    for (byte i = 0; i < 3; ++i)
+    {
+        unlock[i] = 0;
+    }
+}
+
+void updatePresetsValues()
 {
     // ポット処理更新
     for (byte i = 0; i < POTS_MAX; ++i)
     {
-        potValues[i] = pots[i].analogRead();
+        uint16_t readValue = pots[i].analogRead();
+        byte value = (*(byte *)(values[presetIndex][i][0]));
+        byte min = (*(byte *)values[presetIndex][i][1]);
+        byte max = (*(byte *)values[presetIndex][i][2]);
+        byte newValue = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
+        if (newValue == value)
+        {
+            unlock[i] = 1;
+        }
+
+        if (unlock[i])
+        {
+            (*(byte *)(values[presetIndex][i][0])) = newValue;       
+        }
+
+        if (assignCV2Pot == i)
+        {
+            uint16_t cvValue = cv.analogRead() * (0.01 * assignCVDepth);
+            byte newCVValue = constrain(map(cvValue, 0, POTS_MAX_VALUE, min, max), min, max);
+
+            uint16_t cvUni = (uint16_t)(POTS_MAX_VALUE * (0.01 * assignCVDepth)) >> 1;
+            byte newCVUni = constrain(map(cvUni, 0, POTS_MAX_VALUE, min, max), min, max);
+
+            if (assignCVMode == 0)
+            {
+                newValue = constrain(newValue + newCVValue, min, max);
+            }
+            else if (assignCVMode == 1)
+            {
+                int16_t unipoleCVValue = constrain((int16_t)(newCVValue - newCVUni), -max, max);
+                newValue = constrain(newValue + unipoleCVValue, min, max);
+            }
+            (*(byte *)(values[presetIndex][i][0])) = newValue;       
+        }
+
+        potValues[i] = readValue;
         // FV-1へポットの値をパルス出力
         pwm_set_chan_level(potSlices[i], potChs[i], potValues[i]);
     }
-    
+}
+
+void updateSettings()
+{
+    byte settingIndex = 0;
+    // ポット処理更新
+    for (byte i = 0; i < POTS_MAX; ++i)
+    {
+        uint16_t readValue = pots[i].analogRead();
+        byte value = (*(byte *)(settingValues[settingIndex][i][0]));
+        byte min = (*(byte *)settingValues[settingIndex][i][1]);
+        byte max = (*(byte *)settingValues[settingIndex][i][2]);
+        byte newValue = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
+        if (newValue == value)
+        {
+            unlock[i] = 1;
+        }
+
+        if (unlock[i])
+        {
+            (*(byte *)(settingValues[settingIndex][i][0])) = newValue;       
+        }
+        potSettingValues[i] = readValue;
+    }
+}
+
+static byte dispMode = 0;
+void updateController()
+{
+    static byte lastPresetIndex = presetIndex;
     byte stateSw0 = sw0.getState();
     byte stateSw1 = sw1.getState();
-    // ボタン処理：プリセット変更
-    if (stateSw0 == 2)
+    if (dispMode == 0)
     {
-        if (dispMode)
-        {
-            ezOscillo.incDelay();
-        }
-        else
+        updatePresetsValues();
+        // ボタン処理：プリセット変更
+        if (stateSw0 == 2)
         {
             presetIndex = constrainCyclic(presetIndex + 1, 0, PRESET_TOTAL - 1);
             setRomBit(presetIndex);
             setPresetBit(presetIndex);
         }
-    }
-    else if (stateSw0 == 3)
-    {
-        dispMode = dispMode ? 0 : 1;
-    }
-    if (stateSw1 == 2)
-    {
-        if (dispMode)
+        else if (stateSw0 == 3)
         {
-            ezOscillo.decDelay();
+            dispMode = 1;
+            resetUnlock();
         }
-        else
+        else if (stateSw1 == 2)
         {
             presetIndex = constrainCyclic(presetIndex - 1, 0, PRESET_TOTAL - 1);
             setRomBit(presetIndex);
             setPresetBit(presetIndex);
         }
+        else if (stateSw1 == 3)
+        {
+            dispMode = 2;
+            resetUnlock();
+        }
     }
+    else if (dispMode == 1)
+    {
+        if (stateSw0 == 2)
+        {
+            ezOscillo.incDelay();
+        }
+        else if (stateSw0 == 3)
+        {
+            dispMode = 0;
+            resetUnlock();
+        }
+        else if (stateSw1 == 2)
+        {
+            ezOscillo.decDelay();
+        }
+        else if (stateSw1 == 3)
+        {
+            dispMode = 2;
+            resetUnlock();
+        }
+    }
+    else if (dispMode == 2)
+    {
+        updateSettings();
+        if (stateSw0 == 2)
+        {
+        }
+        else if (stateSw0 == 3)
+        {
+            dispMode = 1;
+            resetUnlock();
+        }
+        else if (stateSw1 == 2)
+        {
+        }
+        else if (stateSw1 == 3)
+        {
+            dispMode = 0;
+            resetUnlock();
+        }
+    }
+    
 }
 
 // CPU 1は操作系専用
@@ -325,19 +341,23 @@ void loop()
 void setup1()
 {
     initOLED();
-    dispOLED(presetIndex, potValues);
+    dispPresets(&u8g2, presetIndex, potValues);
 }
 
 void loop1()
 {
+    switch (dispMode)
+    {
+    case 0:
+        dispPresets(&u8g2, presetIndex, potValues);
+        break;
+    case 1:
+        ezOscillo.play();
+        break;
+    case 2:
+        dispSettings(&u8g2, potSettingValues);
+        break;
+    }
     // 30fpsで更新
     delay(33);
-    if (dispMode)
-    {
-        ezOscillo.play();
-    }
-    else
-    {
-        dispOLED(presetIndex, potValues);
-    }
 }
