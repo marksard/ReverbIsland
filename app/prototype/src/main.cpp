@@ -186,41 +186,63 @@ void updatePresetsValues()
         byte value = (*(byte *)(values[presetIndex][i][0]));
         byte min = (*(byte *)values[presetIndex][i][1]);
         byte max = (*(byte *)values[presetIndex][i][2]);
-        byte newValue = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
-        if (newValue == value)
+        byte pot8bit = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
+        if (pot8bit == value)
         {
             unlock[i] = 1;
         }
 
-        if (unlock[i])
-        {
-            (*(byte *)(values[presetIndex][i][0])) = newValue;       
-        }
-
-        if (assignCV2Pot == i)
+        uint16_t potPulseValue = 0;
+        // CV入力の加算処理
+        if (assignCV2Pot == i && assignCVDepth > 0)
         {
             uint16_t cvValue = cv.analogRead() * (0.01 * assignCVDepth);
-            byte newCVValue = constrain(map(cvValue, 0, POTS_MAX_VALUE, min, max), min, max);
+            uint16_t uniHalfPoint = (uint16_t)(POTS_MAX_VALUE * (0.01 * assignCVDepth)) >> 1;
 
-            uint16_t cvUni = (uint16_t)(POTS_MAX_VALUE * (0.01 * assignCVDepth)) >> 1;
-            byte newCVUni = constrain(map(cvUni, 0, POTS_MAX_VALUE, min, max), min, max);
+            byte cv8bit = constrain(map(cvValue, 0, POTS_MAX_VALUE, min, max), min, max);
+            byte uniHalfPoint8bit = constrain(map(uniHalfPoint, 0, POTS_MAX_VALUE, min, max), min, max);
+
+            uint16_t addCv = 0;
+            byte addCv8bit = 0;
 
             if (assignCVMode == 0)
             {
-                newValue = constrain(newValue + newCVValue, min, max);
+                addCv = constrain(readValue + cvValue, 0, POTS_MAX_VALUE);
+                addCv8bit = constrain(pot8bit + cv8bit, min, max);
             }
             else if (assignCVMode == 1)
             {
-                int16_t unipoleCVValue = constrain((int16_t)(newCVValue - newCVUni), -max, max);
-                newValue = constrain(newValue + unipoleCVValue, min, max);
-            }
-            (*(byte *)(values[presetIndex][i][0])) = newValue;       
-        }
+                long cvUni = constrain((long)(cvValue - uniHalfPoint), -POTS_MAX_VALUE, POTS_MAX_VALUE);
+                addCv = constrain(readValue + cvUni, 0, POTS_MAX_VALUE);
 
+                int16_t cv8bitUni = constrain((int16_t)(cv8bit - uniHalfPoint8bit), -max, max);
+                addCv8bit = constrain(pot8bit + cv8bitUni, min, max);
+            }
+
+            potPulseValue = addCv;
+            (*(byte *)(values[presetIndex][i][0])) = addCv8bit;
+            // FV-1へポットの値をパルス出力
+            pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
+            Serial.print("2,");
+        }
+        else if (unlock[i])
+        {
+            potPulseValue = readValue;
+            (*(byte *)(values[presetIndex][i][0])) = pot8bit;
+            // FV-1へポットの値をパルス出力
+            pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
+            Serial.print("1,");
+        }
+        else
+        {
+            potPulseValue = map(value, min, max, 0, POTS_MAX_VALUE);
+            // FV-1へポットの値をパルス出力
+            pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
+            Serial.print("0,");
+        }
         potValues[i] = readValue;
-        // FV-1へポットの値をパルス出力
-        pwm_set_chan_level(potSlices[i], potChs[i], potValues[i]);
     }
+        Serial.println("");
 }
 
 void updateSettings()
@@ -233,16 +255,17 @@ void updateSettings()
         byte value = (*(byte *)(settingValues[settingIndex][i][0]));
         byte min = (*(byte *)settingValues[settingIndex][i][1]);
         byte max = (*(byte *)settingValues[settingIndex][i][2]);
-        byte newValue = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
-        if (newValue == value)
+        byte pot8bit = constrain(map(readValue, 0, POTS_MAX_VALUE, min, max), min, max);
+        if (pot8bit == value)
         {
             unlock[i] = 1;
         }
 
         if (unlock[i])
         {
-            (*(byte *)(settingValues[settingIndex][i][0])) = newValue;       
+            (*(byte *)(settingValues[settingIndex][i][0])) = pot8bit;       
         }
+
         potSettingValues[i] = readValue;
     }
 }
@@ -282,6 +305,7 @@ void updateController()
     }
     else if (dispMode == 1)
     {
+        updatePresetsValues();
         if (stateSw0 == 2)
         {
             ezOscillo.incDelay();

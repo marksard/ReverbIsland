@@ -16,6 +16,8 @@ byte mode0 = 0;
 byte mode1 = 1;
 byte mode2 = 2;
 
+static const char *_assignMode[] = {"absolute", "relative"};
+
 class ParamGroup
 {
 public:
@@ -78,6 +80,9 @@ public:
                 break;
             case 1:
                 sprintf(disp_buf, "%s:%03d", _pValueName[i], valueItem);
+                break;
+            case 2:
+                sprintf(disp_buf, "%s:%s", _pValueName[i], _assignMode[valueItem]);
                 break;
             
             default:

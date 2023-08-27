@@ -10,7 +10,7 @@
 // プリセット名やパラメタ名などは、EEPROMには入ってないしEEPROMを直接読まないのでここで都度定義する必要がある
 const static char *settingNames[EXSETMENU_MAX][4] = {
     // INTERNAL PRESETS
-    {"CV Setting  ", "Assign Mode ", "Assign Pot  ", "Depth       "},
+    {"CV Assig Setting", "Mode       ", "Dest Pot No", "Depth      "},
 };
 
 extern byte mode0;
