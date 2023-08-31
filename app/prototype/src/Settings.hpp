@@ -18,14 +18,14 @@ extern byte mode1;
 extern byte mode2;
 
 extern byte minValue;
-static byte maxCVMode = 1;
+static byte maxCVMode = 2;
 static byte maxCV2Pot = POTS_MAX - 1;
 static byte maxCVDepth = 100;
 static ParamGroup settingGroup[EXSETMENU_MAX];
 
-byte assignCVMode = 1;
+byte assignCVMode = 0;
 byte assignCV2Pot = 2;
-byte assignCVDepth = 70;
+byte assignCVDepth = 50;
 
 static byte *settingValues[EXSETMENU_MAX][POTS_MAX][4] =
 {

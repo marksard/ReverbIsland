@@ -152,6 +152,15 @@ void initController()
     pots[0].init(POT0);
     pots[1].init(POT1);
     pots[2].init(POT2);
+
+    // 空読みして内部状態を安定させる
+    for (byte i = 0; i < 255; ++i)
+    {
+        pots[0].analogRead();
+        pots[1].analogRead();
+        pots[2].analogRead();
+    }
+
     cv.init(CV);
     ezOscillo.init(&u8g2, &cv, POTS_ROW * 16);
 
@@ -207,10 +216,15 @@ void updatePresetsValues()
 
             if (assignCVMode == 0)
             {
+                addCv = readValue;
+                addCv8bit = pot8bit;
+            }
+            else if (assignCVMode == 1)
+            {
                 addCv = constrain(readValue + cvValue, 0, POTS_MAX_VALUE);
                 addCv8bit = constrain(pot8bit + cv8bit, min, max);
             }
-            else if (assignCVMode == 1)
+            else if (assignCVMode == 2)
             {
                 long cvUni = constrain((long)(cvValue - uniHalfPoint), -POTS_MAX_VALUE, POTS_MAX_VALUE);
                 addCv = constrain(readValue + cvUni, 0, POTS_MAX_VALUE);
