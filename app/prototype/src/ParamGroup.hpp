@@ -16,7 +16,7 @@ byte mode0 = 0;
 byte mode1 = 1;
 byte mode2 = 2;
 
-static const char *_assignMode[] = {"absolute", "relative"};
+static const char *_assignMode[] = {"off", "absolute", "relative"};
 
 class ParamGroup
 {
