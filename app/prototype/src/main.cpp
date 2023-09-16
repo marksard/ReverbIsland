@@ -237,7 +237,7 @@ void updatePresetsValues()
             (*(byte *)(values[presetIndex][i][0])) = addCv8bit;
             // FV-1へポットの値をパルス出力
             pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
-            Serial.print("2,");
+            // Serial.print("2,");
         }
         else if (unlock[i])
         {
@@ -245,18 +245,18 @@ void updatePresetsValues()
             (*(byte *)(values[presetIndex][i][0])) = pot8bit;
             // FV-1へポットの値をパルス出力
             pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
-            Serial.print("1,");
+            // Serial.print("1,");
         }
         else
         {
             potPulseValue = map(value, min, max, 0, POTS_MAX_VALUE);
             // FV-1へポットの値をパルス出力
             pwm_set_chan_level(potSlices[i], potChs[i], potPulseValue);
-            Serial.print("0,");
+            // Serial.print("0,");
         }
         potValues[i] = readValue;
     }
-        Serial.println("");
+        // Serial.println("");
 }
 
 void updateSettings()

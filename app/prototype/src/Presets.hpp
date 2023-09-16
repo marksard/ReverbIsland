@@ -21,15 +21,25 @@ const static char *names[PRESET_TOTAL][4] = {
     {"Test        ", "------------", "------------", "------------"},
     {"Reverb 1    ", "Reverb Time ", "HF Filter   ", "LF Filter   "},
     {"Reverb 2    ", "Reverb Time ", "HF Filter   ", "LF Filter   "},
-    // EEPROM A（例）   
-    {"Echo Reverb ", "Delay       ", "Repeat      ", "Reverb      "}, // Spin Semi  3K_V1_4_ECHO-REV.spn
-    {"Rv+Flnge+LP ", "Reverb      ", "Flanger     ", "LPF         "}, // Dave Spinkler  dance_ir_fla_l.spn
-    {"Rv+Pitch+LP ", "Reverb      ", "Pitch       ", "Filter      "}, // Dave Spinkler  dance_ir_ptz_l.spn
-    {"ShimmerRvOct", "Shimmer     ", "Time        ", "Damping     "}, // Dattorro Mix Reverb  dattorro-shimmer_oct_var-lvl.spn
-    {"ShimmerValLv", "Shimmer     ", "Time        ", "Damping     "}, // Dattorro Mix Reverb  dattorro-shimmer_val-lvl.spn
-    {"SnglTapeEcRv", "Time        ", "Feedback    ", "Damping     "}, // ---  dv103-1head-pp-2_1-4xreverb.spn
-    {"DualTapeEcRv", "DlayTime    ", "Feedback    ", "Damping     "}, // ---  dv103-2head-2_1-reverb.spn
-    {"RoomReverb  ", "DlayTime    ", "Damping     ", "Feedback    "}, // Digital Larry  room-reverb-3-4-5.spn
+    // EEPROM A（例）marksard selection vol.1 
+    {"ShimmerRvOct", "Shimmer     ", "Time        ", "Damping     "}, // dattorro-shimmer_oct_var-lvl(Dattorro Mix Reverb)  dattorro-shimmer_oct_var-lvl.spn
+    {"Plate Reverb", "Reverb level", "Reverb time ", "Damping     "}, // Plate Reverb - Dattorro(Dattorro)  dattorro.spn
+    {"Echo Reverb ", "Delay       ", "Repeat      ", "Reverb      "}, // Echo Reverb(Spin Semi)  3K_V1_4_ECHO-REV.spn
+    {"3TCascadeChr", "Time 1      ", "Time 2      ", "Time 3      "}, // Triple Tap Cascaded Delay - Stereo w/ Chorus(Graham Biswell)   tripple_echo_cascaded_stereo+chorus.spn
+    {"SnglTapeEcRv", "Time        ", "Feedback    ", "Damping     "}, // Single Head Tape Echo + Reverb(No name)  dv103-1head-pp-2_1-4xreverb.spn
+    {"Flanger     ", "Speed       ", "Depth       ", "Feedback    "}, // Flanger(Firesledge)  05_bass-fv1-p0-flanger.spn
+    {"Rv+Flnge+LP ", "Reverb      ", "Flanger     ", "LPF         "}, // Reverb+Flange+LP(Dave Spinkler)  dance_ir_fla_l.spn
+    {"Rv+Pitch+LP ", "Reverb      ", "Pitch       ", "Filter      "}, // Reverb+Pitch+LP(Dave Spinkler)  dance_ir_ptz_l.spn
+    // EEPROM B（例）
+    {"Phaser OD   ", "Speed       ", "Depth       ", "Feedback    "}, // Phaser OD(Firesledge)  bass-fv1-p1-phaser.spn
+    {"Distortion  ", "Gain        ", "Tone        ", "Dry/Wet mix "}, // Distortion(Firesledge)  bass-fv1-p5-disto.spn
+    {"Bit crusher ", "P1          ", "P2          ", "P3          "}, // Bit crusher(Frank Thomson)  crusher.spn
+    {"Wah         ", "Reverb      ", "Sensitivity ", "FilterQLevel"}, // Wah(Spin Semi)  GA_DEMO_WAH.spn
+    {"OilCan Delay", "Time & Rate ", "Chorus Width", "Feedback    "}, // Oil can delay(Digital Larry)  oil-can-delay.spn
+    {"Soft Clip OD", "Gain Thresh ", "Volume      ", "Tone        "}, // Soft Clipping Overdrive(Jeroen Korterik)  softclipping_overdrive.spn
+    {"St2FlngMTapD", "Feedback    ", "Reso & Time ", "Return Level"}, // Stereo Dual Flange Multi Tap Delay(Digital Larry)  stereo-dual-flange-multi-tap-delay.spn
+    {"StRingModChr", "Blend       ", "CarrierOffst", "Chorus      "}, // Stereo Ring Modulators w/ Chorus(Digital Larry) stereo-ring-modulators-with-chorus.spn
+
     // // EEPROM A
     // {"EEPROM A    ", "P1          ", "P2          ", "P3          "}, //
     // {"EEPROM A    ", "P1          ", "P2          ", "P3          "}, //
@@ -40,14 +50,14 @@ const static char *names[PRESET_TOTAL][4] = {
     // {"EEPROM A    ", "P1          ", "P2          ", "P3          "}, //
     // {"EEPROM A    ", "P1          ", "P2          ", "P3          "}, //
     // EEPROM B
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
-    {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
+    // {"EEPROM B    ", "P1          ", "P2          ", "P3          "}, //
 };
 
 extern byte mode0;
