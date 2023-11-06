@@ -25,7 +25,7 @@ public:
         _pin = pin;
         _value = 0;
         _valueOld = 65535;
-        pinMode(pin, INPUT_PULLUP);
+        pinMode(pin, INPUT);
     }
 
     uint16_t analogReadDirect()
