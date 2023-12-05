@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+// #define rev100
 // #define PROTO
 
 // GIPO割り当て
@@ -17,8 +18,15 @@
 #define S1 2
 #define S2 3
 #define T0 13
+
+#ifdef rev100
 #define ROM1 6
 #define ROM2 7
+#else
+#define ROM1 0
+#define ROM2 8
+#endif
+
 #define CV A3
 
 #define POTS_MAX 3
