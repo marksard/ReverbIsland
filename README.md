@@ -36,6 +36,7 @@ Effector hardware and application using Spin Semi FV-1.
 |OUT|Output Gain control|
 
 ## Image
+![img](https://marksard.github.io/assets/photos/20231203_IMGP8421.jpg)
 
 ## Schematic
 
