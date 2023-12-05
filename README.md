@@ -39,6 +39,6 @@ Effector hardware and application using Spin Semi FV-1.
 
 ## Schematic
 
-![img](_data/Reverb%20Island%20MkI%20schematic%20rev1.1.0.png)
+![img](_data/Reverb%20Island%20MkI%20Schematic%20rev1.1.0.png)
 
 ## Demonstration
