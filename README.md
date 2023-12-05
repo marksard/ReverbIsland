@@ -30,7 +30,7 @@ Effector hardware and application using Spin Semi FV-1.
 |:--|:--|
 |Pot1 (P1)|FV-1 preset control|
 |Pot2 (P2)|FV-1 preset control|
-|Pot3 (P2)|FV-1 preset control|
+|Pot3 (P3)|FV-1 preset control|
 |IN|Input Gain control|
 |DRY/WET|DRY and WET balance control|
 |OUT|Output Gain control|
