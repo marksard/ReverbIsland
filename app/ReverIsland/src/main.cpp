@@ -1,3 +1,10 @@
+/*!
+ * Reverb Island
+ * Copyright 2023 marksard
+ * This software is released under the MIT license.
+ * see https://opensource.org/licenses/MIT
+ */ 
+
 #include <hardware/pwm.h>
 #include <U8g2lib.h>
 #include "Button.hpp"
